@@ -38,8 +38,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public PagedResponse<UserResponse> getUsersByRole(Role role, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        // Would need to add this query to UserRepository
-        Page<User> userPage = userRepository.findAll(pageable);
+        Page<User> userPage = userRepository.findByRole(role, pageable);
         return mapToPagedResponse(userPage);
     }
     

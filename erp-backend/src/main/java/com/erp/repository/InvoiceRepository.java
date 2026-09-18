@@ -29,7 +29,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
            "CAST(i.id AS string) LIKE CONCAT('%', :keyword, '%')")
     Page<Invoice> search(@Param("keyword") String keyword, Pageable pageable);
     
-    @Query("SELECT COALESCE(SUM(i.totalPayable), 0) FROM Invoice i WHERE i.status != 'CANCELLED' " +
+    @Query("SELECT COALESCE(SUM(i.totalPayable), 0) FROM Invoice i WHERE i.status = 'PENDING' " +
            "AND i.invoiceDate BETWEEN :startDate AND :endDate")
     BigDecimal sumTotalPayableByDateRange(
             @Param("startDate") LocalDateTime startDate,

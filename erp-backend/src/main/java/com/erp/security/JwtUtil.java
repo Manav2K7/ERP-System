@@ -71,7 +71,20 @@ public class JwtUtil {
     }
     
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        byte[] keyBytes;
+        try {
+            // JDK decoder: throws IllegalArgumentException on non-Base64 input
+            // (JJWT's Decoders.BASE64 would throw DecodeException instead).
+            keyBytes = java.util.Base64.getDecoder().decode(secret);
+        } catch (IllegalArgumentException ex) {
+            // Secret is not valid Base64 (e.g. a plain-text secret from the environment):
+            // fall back to its raw bytes instead of crashing every token operation.
+            keyBytes = secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "jwt.secret must be at least 256 bits (32 bytes) for HS256; got " + keyBytes.length + " bytes");
+        }
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

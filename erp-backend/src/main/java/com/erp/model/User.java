@@ -32,7 +32,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
     
-    @Column(nullable = false)
+    // Explicit column name so the mapping never depends on the naming strategy.
+    // The DB column is full_name (V2 migration); the legacy "name" column was dropped.
+    @Column(name = "full_name", nullable = false)
     private String fullName;
     
     @Enumerated(EnumType.STRING)

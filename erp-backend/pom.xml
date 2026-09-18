@@ -48,6 +48,12 @@
             <scope>runtime</scope>
         </dependency>
         
+        <!-- Flyway database migrations (v9.x: PostgreSQL support is in flyway-core) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        
         <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

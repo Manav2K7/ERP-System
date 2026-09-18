@@ -70,8 +70,34 @@ public class GrnServiceImpl implements GrnService {
             productRepository.save(product);
         }
         
-        // Update purchase order status
-        purchaseOrder.setStatus(PurchaseOrderStatus.RECEIVED);
+        // Determine PO status by comparing total received quantity (this + all previous GRNs)
+        // against the PO's ordered quantity per product. Partial coverage => PARTIALLY_RECEIVED.
+        java.util.Map<Long, Integer> orderedByProduct = new java.util.HashMap<>();
+        for (com.erp.model.PurchaseOrderItem poi : purchaseOrder.getItems()) {
+            orderedByProduct.merge(poi.getProduct().getId(), poi.getQuantity(), Integer::sum);
+        }
+        
+        java.util.Map<Long, Integer> receivedByProduct = new java.util.HashMap<>();
+        for (com.erp.model.Grn previousGrn : grnRepository.findByPurchaseOrderId(purchaseOrder.getId(), Pageable.unpaged())) {
+            for (com.erp.model.GrnItem gi : previousGrn.getItems()) {
+                receivedByProduct.merge(gi.getProduct().getId(), gi.getQuantityReceived(), Integer::sum);
+            }
+        }
+        // The current GRN is not persisted yet at this point - include its items too.
+        for (com.erp.model.GrnItem gi : grn.getItems()) {
+            receivedByProduct.merge(gi.getProduct().getId(), gi.getQuantityReceived(), Integer::sum);
+        }
+        
+        boolean fullyReceived = !orderedByProduct.isEmpty();
+        for (java.util.Map.Entry<Long, Integer> entry : orderedByProduct.entrySet()) {
+            int received = receivedByProduct.getOrDefault(entry.getKey(), 0);
+            if (received < entry.getValue()) {
+                fullyReceived = false;
+                break;
+            }
+        }
+        
+        purchaseOrder.setStatus(fullyReceived ? PurchaseOrderStatus.RECEIVED : PurchaseOrderStatus.PARTIALLY_RECEIVED);
         purchaseOrderRepository.save(purchaseOrder);
         
         Grn savedGrn = grnRepository.save(grn);

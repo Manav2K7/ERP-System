@@ -41,9 +41,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String userEmail = jwtUtil.extractEmail(jwt);
         
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            UserDetails userDetails;
+            try {
+                userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
+                // Token belongs to a deleted user: leave the context unauthenticated
+                // so the authorization layer rejects the request with 401.
+                filterChain.doFilter(request, response);
+                return;
+            }
             
-            if (jwtUtil.validateToken(jwt, userDetails)) {
+            // isEnabled() check is essential: a disabled (deactivated) user's existing
+            // JWT must stop working immediately, not at next login.
+            if (jwtUtil.validateToken(jwt, userDetails) && userDetails.isEnabled()) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
