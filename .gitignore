@@ -1,0 +1,89 @@
+# =========================
+# Root .gitignore
+# =========================
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build directories
+target/
+build/
+dist/
+out/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.factorypath
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Gradle
+.gradle/
+gradle/
+gradlew
+gradlew.txt
+
+# Frontend
+erp-frontend/dist/
+erp-frontend/.cache/
+erp-frontend/build/
+
+# Backend
+erp-backend/target/
+erp-backend/*.class
+erp-backend/*.jar
+erp-backend/*.war
+
+# Postman
+*.postman_environment.json
+
+# Misc
+*.backup
+*.bak
+*~
+
+#data
+*architecture.md
+*rules.md
+*phases.md
+*prd.md
