@@ -4,15 +4,17 @@ import com.erp.dto.request.LoginRequest;
 import com.erp.dto.request.RegisterRequest;
 import com.erp.dto.response.AuthResponse;
 import com.erp.model.enums.Role;
+import com.erp.security.JwtUtil;
 import com.erp.service.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -21,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
     
     @Autowired
@@ -28,6 +31,14 @@ class AuthControllerTest {
     
     @MockBean
     private AuthService authService;
+    
+    // Required because WebMvcTest picks up JwtAuthenticationFilter (a servlet Filter)
+    // but not its dependencies, which would break context startup.
+    @MockBean
+    private JwtUtil jwtUtil;
+    
+    @MockBean
+    private UserDetailsService userDetailsService;
     
     @Autowired
     private ObjectMapper objectMapper;
