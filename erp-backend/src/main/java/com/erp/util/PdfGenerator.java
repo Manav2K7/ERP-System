@@ -103,7 +103,7 @@ public class PdfGenerator {
             // Totals
             PdfPTable totalsTable = new PdfPTable(2);
             totalsTable.setWidthPercentage(50);
-            totalsTable.setHorizontalAlignment(Element.RIGHT);
+            totalsTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
             totalsTable.setSpacingBefore(10);
             
             addInfoRow(totalsTable, "Subtotal:", String.format("₹%.2f", invoice.getSubtotal()), headerFont, normalFont);

@@ -87,3 +87,4 @@ erp-backend/*.war
 *rules.md
 *phases.md
 *prd.md
+*application.yml
