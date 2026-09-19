@@ -1,0 +1,2466 @@
+{
+  "info": {
+    "name": "ERP System API",
+    "description": "Complete API collection for the ERP System (Inventory & Sales Management).\n\nCovers every controller endpoint: Auth, Profile, User Management, Products, Customers, Suppliers, Sales Orders, Purchase Orders, GRN, Invoices (+PDF) and Dashboard.\n\nRequests are ordered by real business-flow dependency. Tokens and entity IDs are captured automatically into collection variables, so the whole collection runs top-to-bottom in Postman Collection Runner or Newman against a freshly started backend (empty database recommended).\n\nRoles used: ADMIN, SALES_EXECUTIVE, PURCHASE_MANAGER, INVENTORY_MANAGER, ACCOUNTANT (all registered in the first folder).\n\nNOTE: user emails include a {{runEpoch}} suffix (set by the first request) so the collection can be re-run against a database that already has users without hitting duplicate-email 409s.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081" },
+    { "key": "runEpoch", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "salesToken", "value": "" },
+    { "key": "purchaseToken", "value": "" },
+    { "key": "inventoryToken", "value": "" },
+    { "key": "accountantToken", "value": "" },
+    { "key": "targetUserId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "secondProductId", "value": "" },
+    { "key": "customerId", "value": "" },
+    { "key": "supplierId", "value": "" },
+    { "key": "salesOrderId", "value": "" },
+    { "key": "pendingSalesOrderId", "value": "" },
+    { "key": "purchaseOrderId", "value": "" },
+    { "key": "grnId", "value": "" },
+    { "key": "invoiceId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Setup & Registration",
+      "description": "Registers one user per role. Emails carry a runEpoch suffix so re-runs do not collide with existing users.",
+      "item": [
+        {
+          "name": "Register ADMIN",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Unique-per-run suffix so the collection can be re-run against a non-empty DB.",
+                  "if (!pm.collectionVariables.get('runEpoch')) {",
+                  "    pm.collectionVariables.set('runEpoch', Date.now());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.test('Response contains token, email, fullName and role', function () {",
+                  "    pm.expect(body.token).to.be.a('string').and.not.be.empty;",
+                  "    pm.expect(body.fullName).to.eql('Alice Admin');",
+                  "    pm.expect(body.role).to.eql('ROLE_ADMIN');",
+                  "    pm.expect(body.email).to.eql('admin' + pm.collectionVariables.get('runEpoch') + '@erp-test.com');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Alice Admin\",\n  \"email\": \"admin{{runEpoch}}@erp-test.com\",\n  \"password\": \"adminPass123\",\n  \"role\": \"ROLE_ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register SALES_EXECUTIVE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.test('role is ROLE_SALES_EXECUTIVE', function () { pm.expect(body.role).to.eql('ROLE_SALES_EXECUTIVE'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Sam Sales\",\n  \"email\": \"sales{{runEpoch}}@erp-test.com\",\n  \"password\": \"salesPass123\",\n  \"role\": \"ROLE_SALES_EXECUTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register PURCHASE_MANAGER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.test('role is ROLE_PURCHASE_MANAGER', function () { pm.expect(body.role).to.eql('ROLE_PURCHASE_MANAGER'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Paula Purchasing\",\n  \"email\": \"purchase{{runEpoch}}@erp-test.com\",\n  \"password\": \"purchasePass123\",\n  \"role\": \"ROLE_PURCHASE_MANAGER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register INVENTORY_MANAGER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.test('role is ROLE_INVENTORY_MANAGER', function () { pm.expect(body.role).to.eql('ROLE_INVENTORY_MANAGER'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ivy Inventory\",\n  \"email\": \"inventory{{runEpoch}}@erp-test.com\",\n  \"password\": \"inventoryPass123\",\n  \"role\": \"ROLE_INVENTORY_MANAGER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register ACCOUNTANT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.test('role is ROLE_ACCOUNTANT', function () { pm.expect(body.role).to.eql('ROLE_ACCOUNTANT'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Corey Cash\",\n  \"email\": \"accountant{{runEpoch}}@erp-test.com\",\n  \"password\": \"accountPass123\",\n  \"role\": \"ROLE_ACCOUNTANT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register duplicate email again (negative: 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict for already-used email', function () { pm.response.to.have.status(409); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Alice Admin Clone\",\n  \"email\": \"admin{{runEpoch}}@erp-test.com\",\n  \"password\": \"adminPass123\",\n  \"role\": \"ROLE_ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Login (token capture)",
+      "description": "Logs in as each role and stores the JWT in its own collection variable.",
+      "item": [
+        {
+          "name": "Login ADMIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', body.token);",
+                  "pm.test('token captured into adminToken', function () { pm.expect(body.token).to.be.a('string').and.not.be.empty; });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin{{runEpoch}}@erp-test.com\",\n  \"password\": \"adminPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login SALES_EXECUTIVE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('salesToken', body.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sales{{runEpoch}}@erp-test.com\",\n  \"password\": \"salesPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login PURCHASE_MANAGER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('purchaseToken', body.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"purchase{{runEpoch}}@erp-test.com\",\n  \"password\": \"purchasePass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login INVENTORY_MANAGER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('inventoryToken', body.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"inventory{{runEpoch}}@erp-test.com\",\n  \"password\": \"inventoryPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login ACCOUNTANT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('accountantToken', body.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"accountant{{runEpoch}}@erp-test.com\",\n  \"password\": \"accountPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login wrong password (negative: 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 Unauthorized for wrong password', function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin{{runEpoch}}@erp-test.com\",\n  \"password\": \"definitelyWrongPassword\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. User Management (Admin)",
+      "description": "Admin-only user management. Captures targetUserId (the SALES_EXECUTIVE user) for later role/status tests.",
+      "item": [
+        {
+          "name": "Get all users (captures targetUserId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('paged response has content', function () {",
+                  "    pm.expect(body.content).to.be.an('array');",
+                  "    pm.expect(body.totalElements).to.be.at.least(5);",
+                  "});",
+                  "var salesUser = body.content.find(function (u) { return u.email === 'sales' + pm.collectionVariables.get('runEpoch') + '@erp-test.com'; });",
+                  "pm.test('SALES_EXECUTIVE user found in list', function () { pm.expect(salesUser).to.not.be.undefined; });",
+                  "if (salesUser) { pm.collectionVariables.set('targetUserId', salesUser.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get all users as non-admin (negative: 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('403 Forbidden for non-admin token', function () { pm.response.to.have.status(403); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{purchaseToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get user by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('returned id matches targetUserId', function () {",
+                  "    pm.expect(String(body.id)).to.eql(String(pm.collectionVariables.get('targetUserId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{targetUserId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get users by role ROLE_SALES_EXECUTIVE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('every returned user has ROLE_SALES_EXECUTIVE', function () {",
+                  "    pm.expect(body.content.length).to.be.at.least(1);",
+                  "    body.content.forEach(function (u) { pm.expect(u.role).to.eql('ROLE_SALES_EXECUTIVE'); });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/role/ROLE_SALES_EXECUTIVE?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "role", "ROLE_SALES_EXECUTIVE"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change target user role to ROLE_PURCHASE_MANAGER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('role changed to ROLE_PURCHASE_MANAGER', function () {",
+                  "    pm.expect(pm.response.json().role).to.eql('ROLE_PURCHASE_MANAGER');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}/role?role=ROLE_PURCHASE_MANAGER",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{targetUserId}}", "role"],
+              "query": [{ "key": "role", "value": "ROLE_PURCHASE_MANAGER" }]
+            }
+          }
+        },
+        {
+          "name": "Toggle target user status (disable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('user is now disabled', function () {",
+                  "    pm.expect(pm.response.json().enabled).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}/toggle-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{targetUserId}}", "toggle-status"]
+            }
+          }
+        },
+        {
+          "name": "Disabled user's old JWT must be rejected (security check: 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 Unauthorized - disabled user token must be revoked immediately', function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{salesToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [{ "key": "page", "value": "0" }, { "key": "size", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Toggle target user status again (re-enable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('user is enabled again', function () {",
+                  "    pm.expect(pm.response.json().enabled).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}/toggle-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{targetUserId}}", "toggle-status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Auth & Profile",
+      "description": "Change-password flows and the profile endpoint, run as the ACCOUNTANT (untouched by the role/status tests above).",
+      "item": [
+        {
+          "name": "Change password with wrong current password (negative: 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 Unauthorized - wrong current password must NOT succeed (BadCredentials maps to 401)', function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accountantToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"wrongCurrentPassword\",\n  \"newPassword\": \"newSecret456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Change password with correct current password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accountantToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"accountPass123\",\n  \"newPassword\": \"newSecret456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Login with the NEW password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK with new password', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('accountantToken', body.token);",
+                  "pm.test('refreshed accountantToken after password change', function () { pm.expect(body.token).to.be.a('string').and.not.be.empty; });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"accountant{{runEpoch}}@erp-test.com\",\n  \"password\": \"newSecret456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get current user profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('profile returns the logged-in accountant with full data', function () {",
+                  "    pm.expect(body.email).to.eql('accountant' + pm.collectionVariables.get('runEpoch') + '@erp-test.com');",
+                  "    pm.expect(body.fullName).to.eql('Corey Cash');",
+                  "    pm.expect(body.role).to.eql('ROLE_ACCOUNTANT');",
+                  "    pm.expect(body.id).to.not.be.undefined;",
+                  "    pm.expect(body.enabled).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accountantToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Products",
+      "description": "Creates two products used by the rest of the flow, then exercises the read endpoints. Admin token used for writes.",
+      "item": [
+        {
+          "name": "Create Product 1 (Test Widget, price 150, stock 20)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('productId', body.id);",
+                  "pm.test('fields echo back correctly', function () {",
+                  "    pm.expect(body.sku).to.eql('WGT-' + pm.collectionVariables.get('runEpoch'));",
+                  "    pm.expect(Number(body.unitPrice)).to.eql(150);",
+                  "    pm.expect(body.currentStock).to.eql(20);",
+                  "    pm.expect(body.lowStock).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Widget\",\n  \"sku\": \"WGT-{{runEpoch}}\",\n  \"category\": \"Electronics\",\n  \"unitPrice\": 150,\n  \"currentStock\": 20,\n  \"reorderLevel\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          }
+        },
+        {
+          "name": "Create Product 3 as INVENTORY_MANAGER (role check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 - INVENTORY_MANAGER is allowed to create products', function () { pm.response.to.have.status(201); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{inventoryToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Inventory Widget\",\n  \"sku\": \"INV-{{runEpoch}}\",\n  \"category\": \"Electronics\",\n  \"unitPrice\": 10,\n  \"currentStock\": 1,\n  \"reorderLevel\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          }
+        },
+        {
+          "name": "Create Product 2 (Test Gizmo, price 30, stock 1 = low stock)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('secondProductId', body.id);",
+                  "pm.test('product 2 starts low on stock', function () {",
+                  "    pm.expect(body.currentStock).to.eql(1);",
+                  "    pm.expect(body.lowStock).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Gizmo\",\n  \"sku\": \"GZM-{{runEpoch}}\",\n  \"category\": \"Electronics\",\n  \"unitPrice\": 30,\n  \"currentStock\": 1,\n  \"reorderLevel\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          }
+        },
+        {
+          "name": "Create Product with duplicate SKU (negative: 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict for duplicate SKU', function () { pm.response.to.have.status(409); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Widget Clone\",\n  \"sku\": \"WGT-{{runEpoch}}\",\n  \"category\": \"Electronics\",\n  \"unitPrice\": 150,\n  \"currentStock\": 20,\n  \"reorderLevel\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get all products (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('paged payload and at least our 2 products', function () {",
+                  "    pm.expect(body.content).to.be.an('array');",
+                  "    pm.expect(body.totalElements).to.be.at.least(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get product by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('id and sku match product 1', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(String(body.id)).to.eql(String(pm.collectionVariables.get('productId')));",
+                  "    pm.expect(body.sku).to.eql('WGT-' + pm.collectionVariables.get('runEpoch'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get product by SKU",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('SKU lookup returns product 1', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(String(body.id)).to.eql(String(pm.collectionVariables.get('productId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/sku/WGT-{{runEpoch}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "sku", "WGT-{{runEpoch}}"]
+            }
+          }
+        },
+        {
+          "name": "Get low-stock products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('product 2 (stock 1 <= reorder 5) appears in low stock', function () {",
+                  "    var found = body.content.some(function (p) { return String(p.id) === String(pm.collectionVariables.get('secondProductId')); });",
+                  "    pm.expect(found).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/low-stock?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "low-stock"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get product for non-existent id (negative: 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('404 Not Found for unknown product id', function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "999999"]
+            }
+          }
+        },
+        {
+          "name": "Update Product 2 (stock to 40)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('stock updated to 40 and lowStock cleared', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(body.currentStock).to.eql(40);",
+                  "    pm.expect(body.lowStock).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Gizmo\",\n  \"sku\": \"GZM-{{runEpoch}}\",\n  \"category\": \"Electronics\",\n  \"unitPrice\": 30,\n  \"currentStock\": 40,\n  \"reorderLevel\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{secondProductId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{secondProductId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Customers & Suppliers",
+      "description": "Creates the customer and supplier used by the order flow; read endpoints included.",
+      "item": [
+        {
+          "name": "Create Customer (captures customerId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('customerId', body.id);",
+                  "pm.test('customer name echoed', function () { pm.expect(body.name).to.eql('Acme Corporation'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corporation\",\n  \"email\": \"acme{{runEpoch}}@corp.com\",\n  \"phone\": \"+91-9876543210\",\n  \"address\": \"123 Business Park, Mumbai\",\n  \"gstin\": \"27AABCU9603R1ZM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Get customer by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('id matches captured customerId', function () {",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(String(pm.collectionVariables.get('customerId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get all customers (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('at least one customer present', function () {",
+                  "    pm.expect(pm.response.json().totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Supplier (captures supplierId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('supplierId', body.id);",
+                  "pm.test('supplier name echoed', function () { pm.expect(body.name).to.eql('Globex Suppliers'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Globex Suppliers\",\n  \"email\": \"globex{{runEpoch}}@suppliers.com\",\n  \"phone\": \"+91-9876543211\",\n  \"address\": \"456 Industrial Area, Delhi\",\n  \"gstin\": \"07AABCU9603R1ZN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/suppliers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "suppliers"]
+            }
+          }
+        },
+        {
+          "name": "Get supplier by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('id matches captured supplierId', function () {",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(String(pm.collectionVariables.get('supplierId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "suppliers", "{{supplierId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get all suppliers (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('at least one supplier present', function () {",
+                  "    pm.expect(pm.response.json().totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/suppliers?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "suppliers"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Sales Orders",
+      "description": "Sales order lifecycle. Note: salesToken belongs to the SALES_EXECUTIVE whose role was changed in folder 2, so admin performs privileged writes. Order total: 3 x 150 + 5 x 30 = 600.",
+      "item": [
+        {
+          "name": "Create Sales Order (captures salesOrderId, validates total)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('salesOrderId', body.id);",
+                  "pm.test('status starts PENDING', function () { pm.expect(body.status).to.eql('PENDING'); });",
+                  "pm.test('totalAmount = 3*150 + 5*30 = 600 (server-computed, request cannot set it)', function () {",
+                  "    pm.expect(Number(body.totalAmount)).to.eql(600);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"items\": [\n    { \"productId\": {{productId}}, \"quantity\": 3 },\n    { \"productId\": {{secondProductId}}, \"quantity\": 5 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders"]
+            }
+          }
+        },
+        {
+          "name": "Create Sales Order with unknown product (negative: 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('404 Not Found for non-existent product', function () { pm.response.to.have.status(404); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"items\": [\n    { \"productId\": 999999, \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders"]
+            }
+          }
+        },
+        {
+          "name": "Create Sales Order with zero quantity (negative: 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request for zero quantity (validation @Min(1))', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"items\": [\n    { \"productId\": {{productId}}, \"quantity\": 0 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders"]
+            }
+          }
+        },
+        {
+          "name": "Get sales order by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('id and customer match', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(String(body.id)).to.eql(String(pm.collectionVariables.get('salesOrderId')));",
+                  "    pm.expect(String(body.customerId)).to.eql(String(pm.collectionVariables.get('customerId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders/{{salesOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders", "{{salesOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get all sales orders (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('at least one order present', function () {",
+                  "    pm.expect(pm.response.json().totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get sales orders by status PENDING",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('all returned orders are PENDING', function () {",
+                  "    pm.expect(body.content.length).to.be.at.least(1);",
+                  "    body.content.forEach(function (o) { pm.expect(o.status).to.eql('PENDING'); });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders/status/PENDING?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders", "status", "PENDING"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Sales Order (PENDING -> APPROVED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status is now APPROVED', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('APPROVED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders/{{salesOrderId}}/status?status=APPROVED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders", "{{salesOrderId}}", "status"],
+              "query": [{ "key": "status", "value": "APPROVED" }]
+            }
+          }
+        },
+        {
+          "name": "Illegal transition DISPATCHED -> PENDING (negative: 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request - order is APPROVED, going back to PENDING is illegal', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders/{{salesOrderId}}/status?status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders", "{{salesOrderId}}", "status"],
+              "query": [{ "key": "status", "value": "PENDING" }]
+            }
+          }
+        },
+        {
+          "name": "Create second Sales Order (stays PENDING, for negative tests)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('pendingSalesOrderId', body.id);",
+                  "pm.test('second order starts PENDING', function () { pm.expect(body.status).to.eql('PENDING'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": {{customerId}},\n  \"items\": [\n    { \"productId\": {{productId}}, \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sales-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sales-orders"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Purchase Orders",
+      "description": "Creates the purchase order used by the GRN flow (10 x Test Widget at 140 each).",
+      "item": [
+        {
+          "name": "Create Purchase Order (captures purchaseOrderId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('purchaseOrderId', body.id);",
+                  "pm.test('status starts ORDERED', function () { pm.expect(body.status).to.eql('ORDERED'); });",
+                  "pm.test('line total 10 x 140 = 1400', function () {",
+                  "    pm.expect(Number(body.items[0].lineTotal)).to.eql(1400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierId\": {{supplierId}},\n  \"expectedDeliveryDate\": \"2026-12-31\",\n  \"items\": [\n    { \"productId\": {{productId}}, \"quantity\": 10, \"unitPrice\": 140 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/purchase-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchase-orders"]
+            }
+          }
+        },
+        {
+          "name": "Get all purchase orders (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('at least one PO present', function () {",
+                  "    pm.expect(pm.response.json().totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/purchase-orders?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchase-orders"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get purchase orders by status ORDERED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('all returned POs are ORDERED', function () {",
+                  "    pm.expect(body.content.length).to.be.at.least(1);",
+                  "    body.content.forEach(function (o) { pm.expect(o.status).to.eql('ORDERED'); });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/purchase-orders/status/ORDERED?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchase-orders", "status", "ORDERED"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. GRN (stock intake)",
+      "description": "Receives 6 units of product 1 via GRN, verifies stock increase and PO status; then negative tests.",
+      "item": [
+        {
+          "name": "Snapshot product stock before GRN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('stockBeforeGrn', pm.response.json().currentStock);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create GRN for 6 units (captures grnId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('grnId', body.id);",
+                  "pm.test('GRN references the purchase order', function () {",
+                  "    pm.expect(String(body.purchaseOrderId)).to.eql(String(pm.collectionVariables.get('purchaseOrderId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": {{purchaseOrderId}},\n  \"receivedDate\": \"2026-09-19\",\n  \"remarks\": \"Partial delivery: 6 of 10 units received in good condition\",\n  \"items\": [\n    { \"productId\": {{productId}}, \"quantityReceived\": 6 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/grns",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "grns"]
+            }
+          }
+        },
+        {
+          "name": "Verify stock increased by exactly 6 and PO is PARTIALLY_RECEIVED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "var before = Number(pm.collectionVariables.get('stockBeforeGrn'));",
+                  "pm.test('currentStock increased by exactly 6', function () {",
+                  "    pm.expect(body.currentStock).to.eql(before + 6);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get GRNs by purchase order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('the GRN just created is returned', function () {",
+                  "    var found = body.content.some(function (g) { return String(g.id) === String(pm.collectionVariables.get('grnId')); });",
+                  "    pm.expect(found).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/grns/purchase-order/{{purchaseOrderId}}?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "grns", "purchase-order", "{{purchaseOrderId}}"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get GRN by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('id matches captured grnId', function () {",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(String(pm.collectionVariables.get('grnId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/grns/{{grnId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "grns", "{{grnId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get all GRNs (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('at least one GRN present', function () {",
+                  "    pm.expect(pm.response.json().totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/grns?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "grns"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm PO status is PARTIALLY_RECEIVED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('PO moved to PARTIALLY_RECEIVED after partial GRN', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('PARTIALLY_RECEIVED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/purchase-orders/{{purchaseOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchase-orders", "{{purchaseOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create GRN for remaining 4 units (PO -> RECEIVED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": {{purchaseOrderId}},\n  \"receivedDate\": \"2026-09-19\",\n  \"remarks\": \"Final delivery: remaining 4 units\",\n  \"items\": [\n    { \"productId\": {{productId}}, \"quantityReceived\": 4 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/grns",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "grns"]
+            }
+          }
+        },
+        {
+          "name": "Confirm PO status is now RECEIVED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('PO fully RECEIVED', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('RECEIVED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/purchase-orders/{{purchaseOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "purchase-orders", "{{purchaseOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create GRN against fully RECEIVED PO (negative: 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request - cannot receive against a fully received PO', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseOrderId\": {{purchaseOrderId}},\n  \"receivedDate\": \"2026-09-19\",\n  \"remarks\": \"This must fail\",\n  \"items\": [\n    { \"productId\": {{productId}}, \"quantityReceived\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/grns",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "grns"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Invoices",
+      "description": "Invoice generation from the APPROVED sales order, PDF download, status to PAID. Subtotal 600 -> GST 108 -> total 708. Negative tests cover PENDING-order rule and duplicate invoice.",
+      "item": [
+        {
+          "name": "Generate invoice from PENDING order (negative: 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request - only APPROVED/DISPATCHED orders can be invoiced', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate/{{pendingSalesOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "generate", "{{pendingSalesOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Generate invoice from APPROVED order (captures invoiceId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.collectionVariables.set('invoiceId', body.id);",
+                  "pm.test('status starts PENDING', function () { pm.expect(body.status).to.eql('PENDING'); });",
+                  "pm.test('subtotal 600, GST 18% = 108, totalPayable 708 (server-computed)', function () {",
+                  "    pm.expect(Number(body.subtotal)).to.eql(600);",
+                  "    pm.expect(Number(body.taxAmount)).to.eql(108);",
+                  "    pm.expect(Number(body.totalPayable)).to.eql(708);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate/{{salesOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "generate", "{{salesOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Generate second invoice for same order (negative: 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict - duplicate invoice for the same sales order', function () { pm.response.to.have.status(409); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/generate/{{salesOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "generate", "{{salesOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get invoice by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('id matches captured invoiceId', function () {",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(String(pm.collectionVariables.get('invoiceId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get invoice by sales order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('returns the invoice generated for this order', function () {",
+                  "    var body = pm.response.json();",
+                  "    pm.expect(String(body.id)).to.eql(String(pm.collectionVariables.get('invoiceId')));",
+                  "    pm.expect(String(body.salesOrderId)).to.eql(String(pm.collectionVariables.get('salesOrderId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/sales-order/{{salesOrderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "sales-order", "{{salesOrderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get all invoices (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('at least one invoice present', function () {",
+                  "    pm.expect(pm.response.json().totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get invoices by status PENDING",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('our invoice is among the PENDING ones', function () {",
+                  "    var found = body.content.some(function (i) { return String(i.id) === String(pm.collectionVariables.get('invoiceId')); });",
+                  "    pm.expect(found).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accountantToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/status/PENDING?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "status", "PENDING"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download invoice PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('content-type is application/pdf', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});",
+                  "pm.test('non-empty PDF payload', function () {",
+                  "    pm.expect(pm.response.responseSize).to.be.above(100);",
+                  "});",
+                  "pm.test('Content-Disposition attachment with .pdf filename', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Disposition')).to.include('.pdf');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}/pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}", "pdf"]
+            }
+          }
+        },
+        {
+          "name": "Mark invoice PAID (PENDING -> PAID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status is now PAID', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('PAID');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accountantToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}/status?status=PAID",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}", "status"],
+              "query": [{ "key": "status", "value": "PAID" }]
+            }
+          }
+        },
+        {
+          "name": "Invalid invoice transition PAID -> CANCELLED (negative: 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request - PAID is a terminal state', function () { pm.response.to.have.status(400); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accountantToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}/status?status=CANCELLED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}", "status"],
+              "query": [{ "key": "status", "value": "CANCELLED" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Dashboard",
+      "description": "Summary endpoints as ADMIN/ACCOUNTANT. Verifies the numbers reflect everything created above.",
+      "item": [
+        {
+          "name": "Get dashboard summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('monthly sales include our 600 order', function () {",
+                  "    pm.expect(Number(body.totalSalesThisMonth)).to.be.at.least(600);",
+                  "});",
+                  "pm.test('our invoice is no longer pending (it was marked PAID)', function () {",
+                  "    pm.expect(body.pendingInvoices).to.eql(0);",
+                  "    pm.expect(Number(body.pendingInvoiceAmount)).to.eql(0);",
+                  "});",
+                  "pm.test('inventory counts reflect created products', function () {",
+                  "    pm.expect(body.totalProducts).to.be.at.least(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "summary"]
+            }
+          }
+        },
+        {
+          "name": "Get sales summary (wide date range)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('totalSales includes our order', function () {",
+                  "    pm.expect(Number(pm.response.json().totalSales)).to.be.at.least(600);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/sales-summary?startDate=2026-01-01&endDate=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "sales-summary"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-12-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get purchase summary (wide date range)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('totalPurchases includes our PO (10 x 140 = 1400)', function () {",
+                  "    pm.expect(Number(pm.response.json().totalPurchases)).to.be.at.least(1400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/purchase-summary?startDate=2026-01-01&endDate=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "purchase-summary"],
+              "query": [
+                { "key": "startDate", "value": "2026-01-01" },
+                { "key": "endDate", "value": "2026-12-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get stock alerts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('response is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/stock-alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "stock-alerts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Access Control & Edge Cases",
+      "description": "Cross-cutting negative tests: missing token, deleted-entity lookups, and user deletion.",
+      "item": [
+        {
+          "name": "Protected endpoint with NO Authorization header (negative: 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 Unauthorized - no token provided', function () { pm.response.to.have.status(401); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Product 2 (soft delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{secondProductId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "{{secondProductId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Customer (soft delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers", "{{customerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Supplier (soft delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/suppliers/{{supplierId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "suppliers", "{{supplierId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete user (removes the test sales/purchase user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('204 No Content', function () { pm.response.to.have.status(204); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{targetUserId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
